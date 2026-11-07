@@ -69,7 +69,7 @@ export default function AdminUsers() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Permanently delete this user? This cannot be undone.')) return
+    if (!confirm('Remove this user from Portfolio? Their account is kept if they use another app.')) return
     try {
       await adminDeleteUser(id)
       setUsers((p) => p.filter((u) => u.id !== id))
@@ -192,9 +192,9 @@ export default function AdminUsers() {
                       onClick={() => handleDelete(u.id)}
                       className="admin-btn admin-btn-danger admin-btn-sm"
                       disabled={u.id === me?.id}
-                      title={u.id === me?.id ? 'Cannot delete your own account' : ''}
+                      title={u.id === me?.id ? 'Cannot remove your own account' : ''}
                     >
-                      Delete
+                      Remove
                     </button>
                   </td>
                 </tr>

@@ -7,7 +7,7 @@
  *   DB `description`  →  JS `desc`     (projects)
  *   DB `read_time`    →  JS `readTime` (blogs)
  */
-import { supabase, supabasePublic } from "./supabase";
+import { supabase } from "./supabase";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -51,6 +51,29 @@ function fromProject({ desc, ...rest }) {
 /** Convert a component blog object to DB columns before insert/update. */
 function fromBlog({ readTime, ...rest }) {
   return { ...rest, read_time: readTime ?? "5 min read" };
+}
+
+/**
+ * Fetch the signed-in user's portfolio role, or null if they have no row.
+ * Uses raw fetch with the session token: this runs inside the
+ * onAuthStateChange callback, where a Supabase client query deadlocks on the
+ * auth lock.
+ */
+export async function getMyRole(userId, accessToken) {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/user_projects?select=role&user_id=eq.${userId}&project=eq.portfolio&limit=1`,
+    {
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${accessToken}`,
+        "Accept-Profile": "public",
+      },
+    },
+  );
+  if (!res.ok)
+    throw new Error(`Supabase REST error ${res.status}: ${await res.text()}`);
+  const rows = await res.json();
+  return rows[0]?.role ?? null;
 }
 
 // ── Public reads ─────────────────────────────────────────────
@@ -142,7 +165,8 @@ export async function deleteBlog(slug) {
 // ── User management (admin only) ────────────────────────────
 
 export async function getUsers() {
-  const { data, error } = await supabasePublic
+  const { data, error } = await supabase
+    .schema("public")
     .from("user_projects")
     .select("user_id, email, role, created_at")
     .eq("project", "portfolio")
@@ -154,7 +178,8 @@ export async function getUsers() {
 export async function updateUser(userId, updates) {
   const allowed = {};
   if (updates.role !== undefined) allowed.role = updates.role;
-  const { data, error } = await supabasePublic
+  const { data, error } = await supabase
+    .schema("public")
     .from("user_projects")
     .update(allowed)
     .eq("user_id", userId)
@@ -166,25 +191,16 @@ export async function updateUser(userId, updates) {
 }
 
 export async function adminCreateUser(email, password, role) {
-  const { data: signUpData, error: signUpError } =
-    await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    });
-  if (signUpError) throw signUpError;
-  const userId = signUpData.user.id;
-  const resolvedRole = role === "admin" ? "admin" : "member";
-  const { error: upsertError } = await supabasePublic
-    .from("user_projects")
-    .upsert(
-      { user_id: userId, project: "portfolio", email, role: resolvedRole },
-      { onConflict: "user_id,project" },
-    );
-  if (upsertError) throw upsertError;
-  return signUpData.user;
+  const { data, error } = await supabase.rpc("admin_create_user", {
+    p_email: email,
+    p_password: password,
+    p_role: role,
+  });
+  if (error) throw error;
+  return data;
 }
 
+/** Remove a user from portfolio. Their account stays if another app uses it. */
 export async function adminDeleteUser(userId) {
   const { error } = await supabase.rpc("admin_delete_user", {
     p_user_id: userId,

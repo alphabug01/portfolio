@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase, supabasePublic } from '../lib/supabase'
+import { getMyRole } from '../lib/api'
+import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
@@ -8,20 +9,17 @@ export function AuthProvider({ children }) {
   const [role, setRole] = useState(null)     // 'admin' | 'member' | null
   const [loading, setLoading] = useState(true)
 
-  async function syncRole(sessionUser) {
-    if (!sessionUser) {
+  /**
+   * Resolve the role using the access token directly. This must not use the
+   * Supabase client: it runs inside onAuthStateChange, which holds the auth lock.
+   */
+  async function syncRole(sessionUser, accessToken) {
+    if (!sessionUser || !accessToken) {
       setRole(null)
       return
     }
     try {
-      const { data, error } = await supabasePublic
-        .from('user_projects')
-        .select('role')
-        .eq('user_id', sessionUser.id)
-        .eq('project', 'portfolio')
-        .single()
-      if (error && error.code !== 'PGRST116') throw error
-      setRole(data?.role ?? 'member')
+      setRole((await getMyRole(sessionUser.id, accessToken)) ?? 'member')
     } catch {
       setRole('member')
     }
@@ -32,7 +30,7 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const u = session?.user ?? null
       setUser(u)
-      await syncRole(u)
+      await syncRole(u, session?.access_token ?? null)
       setLoading(false)
     })
 
@@ -42,7 +40,7 @@ export function AuthProvider({ children }) {
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const u = session?.user ?? null
       setUser(u)
-      await syncRole(u)
+      await syncRole(u, session?.access_token ?? null)
     })
 
     return () => subscription.unsubscribe()
@@ -52,7 +50,7 @@ export function AuthProvider({ children }) {
   async function login(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw new Error(error.message)
-    await syncRole(data.user)
+    await syncRole(data.user, data.session?.access_token ?? null)
     return data
   }
 

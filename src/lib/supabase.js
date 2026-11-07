@@ -12,8 +12,3 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   db: { schema: "portfolio" },
 });
-
-// Targets the shared public schema for cross-project tables (user_projects, etc.)
-export const supabasePublic = createClient(supabaseUrl, supabaseAnonKey, {
-  db: { schema: "public" },
-});
