@@ -60,6 +60,10 @@ npm run build
 npm run preview
 ```
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
 ## License
 
 MIT

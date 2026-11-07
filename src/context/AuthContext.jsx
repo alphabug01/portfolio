@@ -1,38 +1,29 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { ensureMyProfile, getMyProfile } from '../lib/api'
-import { supabase } from '../lib/supabase'
+import { supabase, supabasePublic } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [role, setRole] = useState(null)     // 'admin' | 'editor' | 'viewer' | null
+  const [role, setRole] = useState(null)     // 'admin' | 'member' | null
   const [loading, setLoading] = useState(true)
 
-  /**
-   * Fetch profile role using the access token directly (no extra getSession call).
-   * @param {object|null} sessionUser
-   * @param {string|null} accessToken
-   */
-  async function syncRole(sessionUser, accessToken) {
-    if (!sessionUser || !accessToken) {
+  async function syncRole(sessionUser) {
+    if (!sessionUser) {
       setRole(null)
       return
     }
     try {
-      let profile = null
-      try {
-        profile = await getMyProfile(accessToken)
-      } catch (e) {
-        if (e?.code === 'PGRST116') {
-          profile = await ensureMyProfile(accessToken)
-        } else {
-          throw e
-        }
-      }
-      setRole(profile?.role ?? 'viewer')
+      const { data, error } = await supabasePublic
+        .from('user_projects')
+        .select('role')
+        .eq('user_id', sessionUser.id)
+        .eq('project', 'portfolio')
+        .single()
+      if (error && error.code !== 'PGRST116') throw error
+      setRole(data?.role ?? 'member')
     } catch {
-      setRole('viewer')
+      setRole('member')
     }
   }
 
@@ -41,7 +32,7 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const u = session?.user ?? null
       setUser(u)
-      await syncRole(u, session?.access_token ?? null)
+      await syncRole(u)
       setLoading(false)
     })
 
@@ -51,7 +42,7 @@ export function AuthProvider({ children }) {
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const u = session?.user ?? null
       setUser(u)
-      await syncRole(u, session?.access_token ?? null)
+      await syncRole(u)
     })
 
     return () => subscription.unsubscribe()
@@ -61,8 +52,7 @@ export function AuthProvider({ children }) {
   async function login(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw new Error(error.message)
-    // Pass access_token directly — avoids calling getSession() again inside api.js
-    await syncRole(data.user, data.session?.access_token ?? null)
+    await syncRole(data.user)
     return data
   }
 

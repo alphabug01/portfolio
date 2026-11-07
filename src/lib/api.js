@@ -7,7 +7,7 @@
  *   DB `description`  →  JS `desc`     (projects)
  *   DB `read_time`    →  JS `readTime` (blogs)
  */
-import { supabase } from "./supabase";
+import { supabase, supabasePublic } from "./supabase";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -53,87 +53,7 @@ function fromBlog({ readTime, ...rest }) {
   return { ...rest, read_time: readTime ?? "5 min read" };
 }
 
-/**
- * Raw authenticated fetch to Supabase REST API.
- * accessToken must be passed in — we never call supabase.auth.getSession() here
- * to avoid hanging if the JS client has init issues.
- */
-async function authRestFetch(path, accessToken, options = {}) {
-  const token = accessToken ?? SUPABASE_KEY;
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    ...options,
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "Accept-Profile": "portfolio",
-      "Content-Profile": "portfolio",
-      Prefer: "return=representation",
-      ...(options.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    const err = new Error(`Supabase REST error ${res.status}: ${text}`);
-    try {
-      err.code = JSON.parse(text)?.code;
-    } catch {}
-    throw err;
-  }
-  if (res.status === 204) return null;
-  return res.json();
-}
-
 // ── Public reads ─────────────────────────────────────────────
-
-/**
- * Fetch profile row for the authenticated user.
- * @param {string} accessToken - JWT from the current Supabase session
- */
-export async function getMyProfile(accessToken) {
-  if (!accessToken)
-    throw Object.assign(new Error("Not authenticated"), { code: "PGRST116" });
-  // Decode user id from JWT (avoid extra network call)
-  let uid;
-  try {
-    uid = JSON.parse(atob(accessToken.split(".")[1])).sub;
-  } catch {}
-  if (!uid)
-    throw Object.assign(new Error("Invalid token"), { code: "PGRST116" });
-  const data = await authRestFetch(
-    `profiles?select=id,role&id=eq.${uid}&limit=1`,
-    accessToken,
-  );
-  if (!data?.length)
-    throw Object.assign(new Error("No profile row"), { code: "PGRST116" });
-  return data[0];
-}
-
-/**
- * Insert a viewer profile row if one doesn't exist, then return the current row.
- * @param {string} accessToken - JWT from the current Supabase session
- */
-export async function ensureMyProfile(accessToken) {
-  if (!accessToken) return null;
-  let uid;
-  try {
-    uid = JSON.parse(atob(accessToken.split(".")[1])).sub;
-  } catch {}
-  if (!uid) return null;
-  // Insert; silently ignore if row already exists
-  await authRestFetch("profiles", accessToken, {
-    method: "POST",
-    headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
-    body: JSON.stringify({ id: uid, role: "viewer" }),
-  }).catch(() => {});
-  // Always re-fetch the current row so we return the real role
-  const data = await authRestFetch(
-    `profiles?select=id,role&id=eq.${uid}&limit=1`,
-    accessToken,
-  );
-  if (!data?.length) throw new Error("Could not create or fetch profile");
-  return data[0];
-}
 
 export async function getProjects() {
   const data = await restFetch("projects?select=*&order=sort_order.asc");
@@ -222,38 +142,47 @@ export async function deleteBlog(slug) {
 // ── User management (admin only) ────────────────────────────
 
 export async function getUsers() {
-  const { data, error } = await supabase.from("profiles").select("*");
+  const { data, error } = await supabasePublic
+    .from("user_projects")
+    .select("user_id, email, role, created_at")
+    .eq("project", "portfolio")
+    .order("created_at", { ascending: true });
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((row) => ({ ...row, id: row.user_id }));
 }
 
-export async function updateUser(id, updates) {
-  const { data, error } = await supabase
-    .from("profiles")
-    .update(updates)
-    .eq("id", id)
-    .select()
+export async function updateUser(userId, updates) {
+  const allowed = {};
+  if (updates.role !== undefined) allowed.role = updates.role;
+  const { data, error } = await supabasePublic
+    .from("user_projects")
+    .update(allowed)
+    .eq("user_id", userId)
+    .eq("project", "portfolio")
+    .select("user_id, email, role, created_at")
     .single();
   if (error) throw error;
-  return data;
+  return { ...data, id: data.user_id };
 }
 
-export async function adminCreateUser(
-  email,
-  password,
-  displayName,
-  role,
-  permissions,
-) {
-  const { data, error } = await supabase.rpc("admin_create_user", {
-    p_email: email,
-    p_password: password,
-    p_display_name: displayName ?? "",
-    p_role: role ?? "viewer",
-    p_permissions: permissions ?? {},
-  });
-  if (error) throw error;
-  return data;
+export async function adminCreateUser(email, password, role) {
+  const { data: signUpData, error: signUpError } =
+    await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+  if (signUpError) throw signUpError;
+  const userId = signUpData.user.id;
+  const resolvedRole = role === "admin" ? "admin" : "member";
+  const { error: upsertError } = await supabasePublic
+    .from("user_projects")
+    .upsert(
+      { user_id: userId, project: "portfolio", email, role: resolvedRole },
+      { onConflict: "user_id,project" },
+    );
+  if (upsertError) throw upsertError;
+  return signUpData.user;
 }
 
 export async function adminDeleteUser(userId) {

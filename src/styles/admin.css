@@ -515,81 +515,6 @@
   margin-bottom: var(--space-md);
 }
 
-/* Permissions fieldset */
-.admin-permissions {
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
-  margin-bottom: var(--space-sm);
-}
-
-.admin-permissions legend {
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wider);
-  color: var(--text-secondary);
-  padding: 0 0.375rem;
-}
-
-.admin-permissions-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-md);
-}
-
-.admin-permissions-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
-}
-
-.admin-permissions-resource {
-  font-size: var(--fs-base);
-  font-weight: 600;
-  color: var(--text);
-  width: 100%;
-}
-
-.admin-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: var(--fs-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.admin-checkbox input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--text);
-  cursor: pointer;
-}
-
-.admin-checkbox span {
-  text-transform: capitalize;
-}
-
-/* User table info cell */
-.admin-user-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.admin-user-name {
-  font-weight: 500;
-  color: var(--text);
-  font-size: var(--fs-base);
-}
-
-.admin-user-email {
-  font-size: var(--fs-xs);
-  color: var(--text-tertiary);
-}
-
 /* Role badges */
 .admin-role-badge {
   display: inline-block;
@@ -607,58 +532,10 @@
   color: var(--bg);
 }
 
-.admin-role-editor {
-  background: var(--accent-subtle);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-
-.admin-role-viewer {
+.admin-role-member {
   background: var(--bg-alt);
   color: var(--text-secondary);
   border: 1px solid var(--border-light);
-}
-
-/* Permission pills */
-.admin-perm-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-
-.admin-perm-pill {
-  display: inline-block;
-  font-size: var(--fs-2xs);
-  font-weight: 500;
-  text-transform: capitalize;
-  padding: 0.15rem 0.45rem;
-  border-radius: var(--radius-sm);
-  line-height: var(--leading-snug);
-}
-
-.admin-perm-on {
-  background: var(--color-success-bg);
-  color: var(--color-success-text);
-}
-
-[data-theme='dark'] .admin-perm-on {
-  background: var(--color-success-bg);
-  color: var(--color-success-text);
-}
-
-.admin-perm-full {
-  background: var(--color-info-bg);
-  color: var(--color-info-text);
-}
-
-[data-theme='dark'] .admin-perm-full {
-  background: var(--color-info-bg);
-  color: var(--color-info-text);
-}
-
-.admin-perm-none {
-  background: var(--bg-alt);
-  color: var(--text-tertiary);
 }
 
 /* Responsive */
