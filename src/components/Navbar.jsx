@@ -98,7 +98,10 @@ export default function Navbar() {
   ]
 
   return (
-    <nav className={`nav${scrolled ? ' scrolled' : ''}${hidden ? ' nav-hidden' : ''}`} id="nav">
+    <>
+      {/* Outside <nav> on purpose: the nav's blur and slide effects would size
+          the backdrop to the nav bar, and its stacking would paint the backdrop
+          over the menu. As a sibling it covers the screen, under the nav. */}
       {mobileOpen && (
         <div
           className="nav-backdrop"
@@ -106,36 +109,38 @@ export default function Navbar() {
           aria-hidden="true"
         />
       )}
-      <div className="nav-inner">
-        <a
-          href="#hero"
-          className="nav-logo"
-          onClick={(e) => handleSmoothScroll(e, '#hero')}
-        >
-          AS
-        </a>
-        <div className={`nav-links${mobileOpen ? ' open' : ''}`}>
-          {navLinks.map(({ href, label }) => (
-            <a
-              key={href}
-              href={href}
-              className={`nav-link${activeSection === href.slice(1) ? ' active' : ''}`}
-              onClick={(e) => handleSmoothScroll(e, href)}
-            >
-              {label}
-            </a>
-          ))}
+      <nav className={`nav${scrolled ? ' scrolled' : ''}${hidden ? ' nav-hidden' : ''}`} id="nav">
+        <div className="nav-inner">
+          <a
+            href="#hero"
+            className="nav-logo"
+            onClick={(e) => handleSmoothScroll(e, '#hero')}
+          >
+            AS
+          </a>
+          <div className={`nav-links${mobileOpen ? ' open' : ''}`}>
+            {navLinks.map(({ href, label }) => (
+              <a
+                key={href}
+                href={href}
+                className={`nav-link${activeSection === href.slice(1) ? ' active' : ''}`}
+                onClick={(e) => handleSmoothScroll(e, href)}
+              >
+                {label}
+              </a>
+            ))}
+          </div>
+          <button
+            className={`nav-toggle${mobileOpen ? ' active' : ''}`}
+            aria-label="Toggle menu"
+            aria-expanded={mobileOpen}
+            onClick={toggleMobile}
+          >
+            <span></span>
+            <span></span>
+          </button>
         </div>
-        <button
-          className={`nav-toggle${mobileOpen ? ' active' : ''}`}
-          aria-label="Toggle menu"
-          aria-expanded={mobileOpen}
-          onClick={toggleMobile}
-        >
-          <span></span>
-          <span></span>
-        </button>
-      </div>
-    </nav>
+      </nav>
+    </>
   )
 }
