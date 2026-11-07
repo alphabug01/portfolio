@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCardReveal } from '../hooks/useCardReveal'
 import { getProjects } from '../lib/api'
+import ProjectLivePreview from './ProjectLivePreview'
 import { ProjectCardSkeleton } from './SkeletonCard'
 
 // Deterministic warm-neutral gradient per project slug (M2)
@@ -56,9 +57,13 @@ export default function Projects() {
                       className="project-image placeholder-img"
                       style={{ background: slugGradient(project.slug) }}
                     >
-                      <div className="placeholder-content">
-                        <span>{project.title}</span>
-                      </div>
+                      {project.links?.preview ? (
+                        <ProjectLivePreview src={project.links.preview} title={project.title} />
+                      ) : (
+                        <div className="placeholder-content">
+                          <span>{project.title}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="project-info">
                       <h3 className="project-title">{project.title}</h3>

@@ -215,6 +215,17 @@ export default function AdminProjectForm() {
           </div>
         </div>
 
+        <div className="admin-field">
+          <label htmlFor="preview">Live Preview URL</label>
+          <input
+            id="preview"
+            name="preview"
+            value={form.links?.preview || ''}
+            onChange={handleLinkChange}
+            placeholder="A page to frame as the project image (optional)"
+          />
+        </div>
+
         <div className="admin-form-actions">
           <button type="submit" className="admin-btn admin-btn-primary" disabled={saving}>
             {saving ? 'Saving...' : isEdit ? 'Update Project' : 'Create Project'}

@@ -9,6 +9,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) wi
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- `src/components/ProjectLivePreview.jsx` — frames a project's live site as its card thumbnail and detail hero, from an optional `links.preview` URL
+- `src/components/admin/AdminProjectForm.jsx` — Live Preview URL field
+
+---
+
 ## [0.8.0-beta] — 2026-04-04
 
 ### Changed

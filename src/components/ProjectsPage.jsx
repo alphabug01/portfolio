@@ -5,6 +5,7 @@ import { getProjects } from '../lib/api'
 import Breadcrumb from './Breadcrumb'
 import Footer from './Footer'
 import Navbar from './Navbar'
+import ProjectLivePreview from './ProjectLivePreview'
 import { ProjectCardSkeleton } from './SkeletonCard'
 
 // Deterministic warm-neutral gradient per project slug (M2)
@@ -87,9 +88,13 @@ export default function ProjectsPage() {
                         className="project-image placeholder-img"
                         style={{ background: slugGradient(project.slug) }}
                       >
-                        <div className="placeholder-content">
-                          <span>{project.title}</span>
-                        </div>
+                        {project.links?.preview ? (
+                          <ProjectLivePreview src={project.links.preview} title={project.title} />
+                        ) : (
+                          <div className="placeholder-content">
+                            <span>{project.title}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="project-info">
                         <h3 className="project-title">{project.title}</h3>

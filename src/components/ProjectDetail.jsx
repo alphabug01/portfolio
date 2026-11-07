@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { getProjectBySlug } from '../lib/api'
 import Breadcrumb from './Breadcrumb'
+import ProjectLivePreview from './ProjectLivePreview'
 import { ProjectDetailSkeleton } from './SkeletonCard'
 
 // Deterministic warm-neutral gradient per project slug (M2)
@@ -78,9 +79,13 @@ export default function ProjectDetail() {
         className="detail-hero placeholder-img"
         style={{ background: slugGradient(slug) }}
       >
-        <div className="placeholder-content">
-          <span>{project.title} — Preview</span>
-        </div>
+        {project.links?.preview ? (
+          <ProjectLivePreview src={project.links.preview} title={project.title} />
+        ) : (
+          <div className="placeholder-content">
+            <span>{project.title} — Preview</span>
+          </div>
+        )}
       </div>
 
       <div className="detail-body">
