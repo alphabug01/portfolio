@@ -190,6 +190,9 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* No double-tap zoom, so quick taps reach the hidden theme switch.
+     Pinch zoom still works. */
+  touch-action: manipulation;
 }
 
 body {
