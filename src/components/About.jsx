@@ -11,7 +11,7 @@ export default function About() {
             </h2>
             <p className="about-body reveal">
               With 6 years of experience building full-stack applications, I've learned that the best code serves its
-              users — not the other way around. I'm an Assistant Manager in IT at IFFCO Tokio, where I build systems
+              users — not the other way around. I'm a Manager in IT at IFFCO Tokio, where I build systems
               that real people depend on every day.
             </p>
             <p className="about-body reveal">

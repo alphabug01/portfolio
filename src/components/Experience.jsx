@@ -9,8 +9,8 @@ export default function Experience() {
             <div className="timeline-marker"></div>
             <div className="timeline-content">
               <div className="timeline-header">
-                <h3 className="timeline-role">Assistant Manager — IT</h3>
-                <span className="timeline-period">2020 — Present</span>
+                <h3 className="timeline-role">Manager — IT</h3>
+                <span className="timeline-period">Apr 2026 — Present</span>
               </div>
               <p className="timeline-company">IFFCO Tokio General Insurance</p>
               <p className="timeline-desc">
@@ -23,6 +23,26 @@ export default function Experience() {
                 <span>Spring JPA</span>
                 <span>REST APIs</span>
               </div>
+            </div>
+          </div>
+          <div className="timeline-item reveal">
+            <div className="timeline-marker"></div>
+            <div className="timeline-content">
+              <div className="timeline-header">
+                <h3 className="timeline-role">Assistant Manager — IT</h3>
+                <span className="timeline-period">Apr 2023 — Apr 2026</span>
+              </div>
+              <p className="timeline-company">IFFCO Tokio General Insurance</p>
+            </div>
+          </div>
+          <div className="timeline-item reveal">
+            <div className="timeline-marker"></div>
+            <div className="timeline-content">
+              <div className="timeline-header">
+                <h3 className="timeline-role">Senior Executive — IT</h3>
+                <span className="timeline-period">Nov 2020 — Apr 2023</span>
+              </div>
+              <p className="timeline-company">IFFCO Tokio General Insurance</p>
             </div>
           </div>
         </div>
