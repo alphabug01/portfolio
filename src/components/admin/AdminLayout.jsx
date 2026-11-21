@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
 export default function AdminLayout() {
-  const { user, role, loading, logout } = useAuth()
+  const { user, role, isPlatformAdmin, loading, logout } = useAuth()
 
   if (loading) {
     return (
@@ -39,7 +39,7 @@ export default function AdminLayout() {
           </a>
           <nav className="admin-nav">
             <a href="/admin/dashboard">Dashboard</a>
-            <a href="/admin/users">Users</a>
+            {isPlatformAdmin && <a href="/admin/users">Users &amp; Apps</a>}
             <a href="/admin/change-password">Change Password</a>
             <button onClick={logout} className="admin-btn admin-btn-outline admin-btn-sm">
               Logout

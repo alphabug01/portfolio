@@ -54,26 +54,39 @@ function fromBlog({ readTime, ...rest }) {
 }
 
 /**
- * Fetch the signed-in user's portfolio role, or null if they have no row.
+ * Fetch the signed-in user's portfolio role (or null) and whether they are a
+ * platform admin, who manages users across every app.
  * Uses raw fetch with the session token: this runs inside the
  * onAuthStateChange callback, where a Supabase client query deadlocks on the
  * auth lock.
  */
-export async function getMyRole(userId, accessToken) {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/user_projects?select=role&user_id=eq.${userId}&project=eq.portfolio&limit=1`,
-    {
+export async function getMyAccess(userId, accessToken) {
+  const headers = {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${accessToken}`,
+  };
+  const [roleRes, adminRes] = await Promise.all([
+    fetch(
+      `${SUPABASE_URL}/rest/v1/user_projects?select=role&user_id=eq.${userId}&project=eq.portfolio&limit=1`,
+      { headers: { ...headers, "Accept-Profile": "public" } },
+    ),
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/is_platform_admin`, {
+      method: "POST",
       headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${accessToken}`,
-        "Accept-Profile": "public",
+        ...headers,
+        "Content-Profile": "public",
+        "Content-Type": "application/json",
       },
-    },
-  );
-  if (!res.ok)
-    throw new Error(`Supabase REST error ${res.status}: ${await res.text()}`);
-  const rows = await res.json();
-  return rows[0]?.role ?? null;
+      body: "{}",
+    }),
+  ]);
+  if (!roleRes.ok)
+    throw new Error(`Supabase REST error ${roleRes.status}: ${await roleRes.text()}`);
+  const rows = await roleRes.json();
+  return {
+    role: rows[0]?.role ?? null,
+    isPlatformAdmin: adminRes.ok ? (await adminRes.json()) === true : false,
+  };
 }
 
 // ── Public reads ─────────────────────────────────────────────
@@ -162,47 +175,98 @@ export async function deleteBlog(slug) {
   if (error) throw error;
 }
 
-// ── User management (admin only) ────────────────────────────
+// ── User & app access (platform admins) ─────────────────────
+// The shared tables live in the `public` schema of the core project.
+// public.user_projects is the only record of who may use which app.
 
-export async function getUsers() {
-  const { data, error } = await supabase
-    .schema("public")
-    .from("user_projects")
-    .select("user_id, email, role, created_at")
-    .eq("project", "portfolio")
+const core = () => supabase.schema("public");
+
+/** All registered apps, oldest first. */
+export async function getApps() {
+  const { data, error } = await core()
+    .from("apps")
+    .select("slug, name, url, self_signup, active, created_at")
     .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createApp({ slug, name, url, self_signup }) {
+  const { data, error } = await core()
+    .from("apps")
+    .insert({ slug, name, url: url || null, self_signup: !!self_signup })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** updates: any of { name, url, self_signup, active }. */
+export async function updateApp(slug, updates) {
+  const { data, error } = await core()
+    .from("apps")
+    .update(updates)
+    .eq("slug", slug)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Every account in the core project with its access:
+ * { id, email, created_at, last_sign_in_at, is_platform_admin, access: { [app]: 'admin' | 'member' } }
+ */
+export async function getPlatformUsers() {
+  const { data, error } = await core().rpc("admin_list_users");
   if (error) throw error;
   return (data ?? []).map((row) => ({ ...row, id: row.user_id }));
 }
 
-export async function updateUser(userId, updates) {
-  const allowed = {};
-  if (updates.role !== undefined) allowed.role = updates.role;
-  const { data, error } = await supabase
-    .schema("public")
-    .from("user_projects")
-    .update(allowed)
-    .eq("user_id", userId)
-    .eq("project", "portfolio")
-    .select("user_id, email, role, created_at")
-    .single();
+/** role: 'admin' | 'member' grants or changes access; null removes it. */
+export async function setUserAccess(userId, app, role) {
+  const { error } = await core().rpc("admin_set_access", {
+    p_user_id: userId,
+    p_app: app,
+    p_role: role || null,
+  });
   if (error) throw error;
-  return { ...data, id: data.user_id };
 }
 
-export async function adminCreateUser(email, password, role) {
-  const { data, error } = await supabase.rpc("admin_create_user", {
+/** Pending requests from people who signed in to an invite-only app. */
+export async function getAccessRequests() {
+  const { data, error } = await core()
+    .from("access_requests")
+    .select("user_id, app, email, requested_at")
+    .eq("status", "pending")
+    .order("requested_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Approve with setUserAccess(userId, app, role); this denies the request. */
+export async function denyAccessRequest(userId, app) {
+  const { error } = await core().rpc("admin_deny_request", {
+    p_user_id: userId,
+    p_app: app,
+  });
+  if (error) throw error;
+}
+
+/** access: { [app]: 'admin' | 'member' }. Apps left out get no access. */
+export async function adminCreateUser(email, password, access) {
+  const { data, error } = await core().rpc("admin_create_user", {
     p_email: email,
     p_password: password,
-    p_role: role,
+    p_access: access,
   });
   if (error) throw error;
   return data;
 }
 
-/** Remove a user from portfolio. Their account stays if another app uses it. */
+/** Deletes the account from every app. */
 export async function adminDeleteUser(userId) {
-  const { error } = await supabase.rpc("admin_delete_user", {
+  const { error } = await core().rpc("admin_delete_user", {
     p_user_id: userId,
   });
   if (error) throw error;

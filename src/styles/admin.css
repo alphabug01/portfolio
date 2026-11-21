@@ -538,6 +538,71 @@
   border: 1px solid var(--border-light);
 }
 
+/* Access matrix */
+.admin-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.admin-muted {
+  color: var(--text-tertiary);
+  text-transform: none;
+}
+
+.admin-user-cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.admin-tag {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.4rem;
+}
+
+.admin-access-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0 var(--space-md);
+}
+
+.admin-access-select {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--text-tertiary);
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+}
+
+.admin-access-select.has-access {
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.admin-access-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-table-matrix th,
+.admin-table-matrix td {
+  white-space: nowrap;
+}
+
+/* The matrix scrolls sideways instead of hiding columns on small screens. */
+.admin-table.admin-table-matrix th:nth-child(3),
+.admin-table.admin-table-matrix td:nth-child(3) {
+  display: table-cell;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .admin-form-row {

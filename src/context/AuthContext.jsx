@@ -1,27 +1,32 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { getMyRole } from '../lib/api'
+import { getMyAccess } from '../lib/api'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [role, setRole] = useState(null)     // 'admin' | 'member' | null
+  const [role, setRole] = useState(null)     // portfolio role: 'admin' | 'member' | null
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
   /**
-   * Resolve the role using the access token directly. This must not use the
+   * Resolve access using the access token directly. This must not use the
    * Supabase client: it runs inside onAuthStateChange, which holds the auth lock.
    */
   async function syncRole(sessionUser, accessToken) {
     if (!sessionUser || !accessToken) {
       setRole(null)
+      setIsPlatformAdmin(false)
       return
     }
     try {
-      setRole((await getMyRole(sessionUser.id, accessToken)) ?? 'member')
+      const access = await getMyAccess(sessionUser.id, accessToken)
+      setRole(access.role)
+      setIsPlatformAdmin(access.isPlatformAdmin)
     } catch {
-      setRole('member')
+      setRole(null)
+      setIsPlatformAdmin(false)
     }
   }
 
@@ -57,10 +62,11 @@ export function AuthProvider({ children }) {
   async function logout() {
     await supabase.auth.signOut()
     setRole(null)
+    setIsPlatformAdmin(false)
   }
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, role, isPlatformAdmin, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
