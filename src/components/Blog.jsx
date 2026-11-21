@@ -54,7 +54,7 @@ export default function Blog() {
               ))}
         </div>
         {!loading && posts.length > 3 && (
-          <div className="section-view-all reveal">
+          <div className="section-view-all">
             <Link to="/blog" className="view-all-link">
               View all posts &rarr;
             </Link>

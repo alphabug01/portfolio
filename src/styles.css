@@ -1624,9 +1624,12 @@ ul {
 /* ============================================
    VIEW ALL LINK
    ============================================ */
+/* Rendered after data loads, so it can't use .reveal (the scroll-reveal
+   hook has already run by then and would leave it stuck at opacity 0). */
 .section-view-all {
   text-align: center;
   margin-top: var(--space-xl);
+  animation: detailFadeIn 0.5s var(--ease) 0.25s both;
 }
 
 .view-all-link {

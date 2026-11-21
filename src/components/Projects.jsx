@@ -79,7 +79,7 @@ export default function Projects() {
               ))}
         </div>
         {!loading && projects.length > 3 && (
-          <div className="section-view-all reveal">
+          <div className="section-view-all">
             <Link to="/projects" className="view-all-link">
               View all projects &rarr;
             </Link>
