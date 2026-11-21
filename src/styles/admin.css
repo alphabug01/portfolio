@@ -110,8 +110,59 @@
   transition: color var(--duration-normal);
 }
 
-.admin-nav a:hover {
+.admin-nav a:hover,
+.admin-nav a[aria-current='page'] {
   color: var(--text);
+}
+
+.admin-nav a[aria-current='page'] {
+  font-weight: 500;
+}
+
+/* Menu button: phones only (see the 640px breakpoint). */
+.admin-menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  margin-right: -8px;
+  padding: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.admin-menu-toggle span {
+  display: block;
+  width: 24px;
+  height: 1.5px;
+  background: var(--text);
+  transition: transform var(--duration-medium) ease;
+}
+
+.admin-menu-toggle.active span:first-child {
+  transform: translateY(3.25px) rotate(45deg);
+}
+
+.admin-menu-toggle.active span:last-child {
+  transform: translateY(-3.25px) rotate(-45deg);
+}
+
+.admin-menu-toggle:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Dims the page under the open menu; sits just below the sticky header. */
+.admin-menu-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-sticky) - 1);
+  background: var(--backdrop-overlay);
 }
 
 .admin-main {
@@ -597,10 +648,94 @@
   white-space: nowrap;
 }
 
-/* The matrix scrolls sideways instead of hiding columns on small screens. */
-.admin-table.admin-table-matrix th:nth-child(3),
-.admin-table.admin-table-matrix td:nth-child(3) {
-  display: table-cell;
+/* Users table: fixed columns however many apps exist. */
+.admin-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.admin-filter-input {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.6rem;
+  min-width: 0;
+}
+
+.admin-filter-input[type='search'] {
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+
+.admin-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.admin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  background: var(--bg-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 0.15rem 0.5rem;
+  white-space: nowrap;
+}
+
+.admin-chip.is-admin {
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.admin-chip.is-off {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.admin-chip-role {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  font-size: 0.65em;
+  color: var(--bg);
+  background: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 0.05rem 0.3rem;
+}
+
+.admin-nowrap {
+  white-space: nowrap;
+}
+
+.admin-table-users th {
+  white-space: nowrap;
+}
+
+.admin-table-users tr.is-editing td {
+  border-bottom-color: transparent;
+}
+
+.admin-access-row td {
+  background: var(--bg);
+  padding: var(--space-md);
+}
+
+.admin-access-row .admin-access-select {
+  width: 100%;
+}
+
+.admin-hint-inline {
+  margin: var(--space-sm) 0 0;
 }
 
 /* Responsive */
@@ -621,8 +756,131 @@
     padding: var(--space-md);
   }
 
-  .admin-table th:nth-child(3),
-  .admin-table td:nth-child(3) {
+  /* Slim header: logo and a menu button; the links drop down under it. */
+  .admin-header-inner {
+    position: relative;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .admin-menu-toggle {
+    display: flex;
+  }
+
+  .admin-menu-backdrop {
+    display: block;
+  }
+
+  .admin-nav {
     display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: var(--space-xs, 0.5rem) var(--space-md) var(--space-md);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 12px 24px -16px rgba(0, 0, 0, 0.25);
+  }
+
+  .admin-nav.open {
+    display: flex;
+  }
+
+  .admin-nav a {
+    padding: 0.875rem 0;
+    font-size: var(--fs-md);
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .admin-nav .admin-btn {
+    margin-top: var(--space-md);
+    align-self: flex-start;
+  }
+
+  .admin-filter-input[type='search'] {
+    flex-basis: 140px;
+    max-width: none;
+  }
+
+  /* Tables become a list of cards: one card per row, each cell a
+     "label  value" line taken from its data-label. Nothing scrolls sideways. */
+  .admin-table-wrap {
+    overflow-x: visible;
+  }
+
+  .admin-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .admin-table,
+  .admin-table tbody {
+    display: block;
+  }
+
+  .admin-table tr {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 0.875rem 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .admin-table tr:last-child,
+  .admin-table tr.is-editing {
+    border-bottom: none;
+  }
+
+  .admin-table td,
+  .admin-table-matrix td {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+    padding: 0;
+    border: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-table td[data-label]::before {
+    content: attr(data-label);
+    flex: 0 0 6.5rem;
+    font-size: var(--fs-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--text-tertiary);
+  }
+
+  .admin-table td.admin-card-title {
+    order: -1;
+    font-weight: 500;
+  }
+
+  .admin-table td.admin-actions {
+    flex-wrap: wrap;
+    padding-top: 0.375rem;
+  }
+
+  .admin-table td.admin-empty {
+    justify-content: center;
+  }
+
+  .admin-access-row td {
+    display: block;
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+  }
+
+  .admin-access-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0 var(--space-sm);
   }
 }

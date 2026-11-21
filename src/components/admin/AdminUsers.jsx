@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import {
   adminCreateUser,
@@ -26,8 +26,33 @@ function blankApp() {
   return { slug: '', name: '', url: '', self_signup: false }
 }
 
+const NO_ACCESS = '__none__'
+
 function formatDate(value) {
   return value ? new Date(value).toLocaleDateString() : '—'
+}
+
+/** The apps a user can open, as chips that wrap instead of one column per app. */
+function AccessChips({ access, apps }) {
+  const granted = apps.filter((app) => access?.[app.slug])
+  if (!granted.length) return <span className="admin-muted">No access</span>
+  return (
+    <div className="admin-chips">
+      {granted.map((app) => {
+        const role = access[app.slug]
+        return (
+          <span
+            key={app.slug}
+            className={`admin-chip${role === 'admin' ? ' is-admin' : ''}${app.active ? '' : ' is-off'}`}
+            title={`${app.name}: ${role}${app.active ? '' : ' (app is off)'}`}
+          >
+            {app.name}
+            {role === 'admin' && <span className="admin-chip-role">admin</span>}
+          </span>
+        )
+      })}
+    </div>
+  )
 }
 
 export default function AdminUsers() {
@@ -42,6 +67,10 @@ export default function AdminUsers() {
   const [userForm, setUserForm] = useState(null) // null | blankUser()
   const [appForm, setAppForm] = useState(null)   // null | blankApp()
   const [saving, setSaving] = useState(false)
+
+  const [editing, setEditing] = useState(null)   // user id whose access panel is open
+  const [query, setQuery] = useState('')
+  const [appFilter, setAppFilter] = useState('') // '' | NO_ACCESS | app slug
 
   useEffect(() => {
     if (isPlatformAdmin) load()
@@ -180,6 +209,14 @@ export default function AdminUsers() {
   const memberCount = (slug) => users.filter((u) => u.access?.[slug]).length
   const appName = (slug) => apps.find((a) => a.slug === slug)?.name ?? slug
 
+  const needle = query.trim().toLowerCase()
+  const visibleUsers = users.filter((u) => {
+    if (needle && !(u.email ?? '').toLowerCase().includes(needle)) return false
+    if (appFilter === NO_ACCESS) return !Object.keys(u.access ?? {}).length
+    if (appFilter) return !!u.access?.[appFilter]
+    return true
+  })
+
   return (
     <div className="admin-dashboard">
       {error && <div className="admin-error">{error}</div>}
@@ -210,9 +247,9 @@ export default function AdminUsers() {
                 const busy = pending[`${req.user_id}:${req.app}`]
                 return (
                   <tr key={`${req.user_id}:${req.app}`}>
-                    <td>{req.email || req.user_id.slice(0, 8) + '…'}</td>
-                    <td>{appName(req.app)}</td>
-                    <td>{formatDate(req.requested_at)}</td>
+                    <td className="admin-card-title">{req.email || req.user_id.slice(0, 8) + '…'}</td>
+                    <td data-label="App">{appName(req.app)}</td>
+                    <td data-label="Requested">{formatDate(req.requested_at)}</td>
                     <td className="admin-actions">
                       <button
                         className="admin-btn admin-btn-primary admin-btn-sm"
@@ -333,71 +370,125 @@ export default function AdminUsers() {
           </div>
         )}
 
+        <div className="admin-filter-bar">
+          <input
+            type="search"
+            className="admin-filter-input"
+            placeholder="Search email…"
+            aria-label="Search users by email"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <select
+            className="admin-filter-input"
+            aria-label="Filter users by app"
+            value={appFilter}
+            onChange={(e) => setAppFilter(e.target.value)}
+          >
+            <option value="">All users</option>
+            <option value={NO_ACCESS}>No access to any app</option>
+            {apps.map((app) => (
+              <option key={app.slug} value={app.slug}>Has {app.name}</option>
+            ))}
+          </select>
+          {visibleUsers.length !== users.length && (
+            <span className="admin-muted">
+              Showing {visibleUsers.length} of {users.length}
+            </span>
+          )}
+        </div>
+
         <div className="admin-table-wrap">
-          <table className="admin-table admin-table-matrix">
+          <table className="admin-table admin-table-users">
             <thead>
               <tr>
                 <th>Email</th>
-                {apps.map((app) => (
-                  <th key={app.slug} title={app.slug}>
-                    {app.name}
-                    {!app.active && <span className="admin-muted"> (off)</span>}
-                  </th>
-                ))}
+                <th>Access</th>
                 <th>Last sign-in</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => {
+              {visibleUsers.map((u) => {
                 const isMe = u.id === me?.id
+                const isOpen = editing === u.id
                 return (
-                  <tr key={u.id}>
-                    <td>
-                      <div className="admin-user-cell">
-                        <span>{u.email || u.id.slice(0, 8) + '…'}</span>
-                        {isMe && <span className="admin-tag">you</span>}
-                        {u.is_platform_admin && (
-                          <span className="admin-role-badge admin-role-admin">platform</span>
-                        )}
-                      </div>
-                    </td>
-                    {apps.map((app) => {
-                      const locked = isMe && app.slug === 'portfolio'
-                      return (
-                        <td key={app.slug}>
-                          <select
-                            className={`admin-access-select${u.access?.[app.slug] ? ' has-access' : ''}`}
-                            aria-label={`${u.email} access to ${app.name}`}
-                            value={u.access?.[app.slug] ?? ''}
-                            disabled={locked || pending[`${u.id}:${app.slug}`]}
-                            title={locked ? 'You cannot change your own portfolio access' : ''}
-                            onChange={(e) => changeAccess(u, app.slug, e.target.value)}
-                          >
-                            {ACCESS_OPTIONS.map((o) => (
-                              <option key={o.value} value={o.value}>{o.label}</option>
-                            ))}
-                          </select>
+                  <Fragment key={u.id}>
+                    <tr className={isOpen ? 'is-editing' : undefined}>
+                      <td className="admin-card-title">
+                        <div className="admin-user-cell">
+                          <span>{u.email || u.id.slice(0, 8) + '…'}</span>
+                          {isMe && <span className="admin-tag">you</span>}
+                          {u.is_platform_admin && (
+                            <span className="admin-role-badge admin-role-admin">platform</span>
+                          )}
+                        </div>
+                      </td>
+                      <td data-label="Access">
+                        <AccessChips access={u.access} apps={apps} />
+                      </td>
+                      <td data-label="Last sign-in" className="admin-nowrap">
+                        {formatDate(u.last_sign_in_at)}
+                      </td>
+                      <td className="admin-actions">
+                        <button
+                          onClick={() => setEditing(isOpen ? null : u.id)}
+                          className="admin-btn admin-btn-outline admin-btn-sm"
+                          aria-expanded={isOpen}
+                        >
+                          {isOpen ? 'Done' : 'Edit access'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(u)}
+                          className="admin-btn admin-btn-danger admin-btn-sm"
+                          disabled={isMe}
+                          title={isMe ? 'You cannot delete your own account' : 'Delete the account everywhere'}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="admin-access-row">
+                        <td colSpan={4}>
+                          <div className="admin-access-grid">
+                            {apps.map((app) => {
+                              const locked = isMe && app.slug === 'portfolio'
+                              const id = `access-${u.id}-${app.slug}`
+                              return (
+                                <div className="admin-field" key={app.slug}>
+                                  <label htmlFor={id}>
+                                    {app.name}
+                                    {!app.active && <span className="admin-muted"> (off)</span>}
+                                  </label>
+                                  <select
+                                    id={id}
+                                    className={`admin-access-select${u.access?.[app.slug] ? ' has-access' : ''}`}
+                                    value={u.access?.[app.slug] ?? ''}
+                                    disabled={locked || pending[`${u.id}:${app.slug}`]}
+                                    title={locked ? 'You cannot change your own portfolio access' : ''}
+                                    onChange={(e) => changeAccess(u, app.slug, e.target.value)}
+                                  >
+                                    {ACCESS_OPTIONS.map((o) => (
+                                      <option key={o.value} value={o.value}>{o.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )
+                            })}
+                          </div>
+                          <p className="admin-hint admin-hint-inline">Changes save as soon as you pick them.</p>
                         </td>
-                      )
-                    })}
-                    <td>{formatDate(u.last_sign_in_at)}</td>
-                    <td className="admin-actions">
-                      <button
-                        onClick={() => handleDeleteUser(u)}
-                        className="admin-btn admin-btn-danger admin-btn-sm"
-                        disabled={isMe}
-                        title={isMe ? 'You cannot delete your own account' : 'Delete the account everywhere'}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
+                      </tr>
+                    )}
+                  </Fragment>
                 )
               })}
-              {!users.length && (
+              {!visibleUsers.length && (
                 <tr>
-                  <td colSpan={apps.length + 3} className="admin-empty">No users found</td>
+                  <td colSpan={4} className="admin-empty">
+                    {users.length ? 'No users match' : 'No users found'}
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -500,16 +591,16 @@ export default function AdminUsers() {
             <tbody>
               {apps.map((app) => (
                 <tr key={app.slug}>
-                  <td>
+                  <td className="admin-card-title">
                     {app.url ? (
                       <a href={app.url} target="_blank" rel="noreferrer">{app.name}</a>
                     ) : (
                       app.name
                     )}
                   </td>
-                  <td><code>{app.slug}</code></td>
-                  <td>{memberCount(app.slug)}</td>
-                  <td>
+                  <td data-label="Slug"><code>{app.slug}</code></td>
+                  <td data-label="Users">{memberCount(app.slug)}</td>
+                  <td data-label="Sign-up">
                     <button
                       className="admin-btn admin-btn-outline admin-btn-sm"
                       onClick={() => toggleApp(app, 'self_signup')}
@@ -518,7 +609,7 @@ export default function AdminUsers() {
                       {app.self_signup ? 'Open' : 'Invite only'}
                     </button>
                   </td>
-                  <td>
+                  <td data-label="Status">
                     <button
                       className="admin-btn admin-btn-outline admin-btn-sm"
                       onClick={() => toggleApp(app, 'active')}

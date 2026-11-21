@@ -53,9 +53,9 @@ export default function AdminDashboard() {
             <tbody>
               {blogs.map((blog) => (
                 <tr key={blog.slug}>
-                  <td>{blog.title}</td>
-                  <td><code>{blog.slug}</code></td>
-                  <td>{blog.date}</td>
+                  <td className="admin-card-title">{blog.title}</td>
+                  <td data-label="Slug"><code>{blog.slug}</code></td>
+                  <td data-label="Date">{blog.date}</td>
                   <td className="admin-actions">
                     <Link
                       to={`/admin/blogs/${blog.slug}/edit`}
@@ -104,10 +104,10 @@ export default function AdminDashboard() {
             <tbody>
               {projects.map((project) => (
                 <tr key={project.slug}>
-                  <td>{project.number}</td>
-                  <td>{project.title}</td>
-                  <td><code>{project.slug}</code></td>
-                  <td>{project.tags?.join(', ')}</td>
+                  <td data-label="#">{project.number}</td>
+                  <td className="admin-card-title">{project.title}</td>
+                  <td data-label="Slug"><code>{project.slug}</code></td>
+                  <td data-label="Tags">{project.tags?.join(', ')}</td>
                   <td className="admin-actions">
                     <Link
                       to={`/admin/projects/${project.slug}/edit`}
